@@ -36,11 +36,13 @@ import { useFileParser } from '@/hooks/useFileParser'
  * react-dropzone の accept オプションに渡す MIME タイプとファイル拡張子の対応。
  * .xlsx: Excel 2007以降のオープン XML 形式
  * .xls:  Excel 97-2003 形式
+ * .csv:  カンマ区切りテキスト
  * .svg:  SVG 画像
  */
 const ACCEPTED_FILE_TYPES = {
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
   'application/vnd.ms-excel': ['.xls'],
+  'text/csv': ['.csv'],
   'image/svg+xml': ['.svg'],
 }
 
@@ -150,6 +152,10 @@ export function DropZone() {
             <span className="flex items-center gap-1.5 rounded-full border bg-muted/40 px-3 py-1">
               <FileSpreadsheet className="h-3.5 w-3.5" />
               .xls
+            </span>
+            <span className="flex items-center gap-1.5 rounded-full border bg-muted/40 px-3 py-1">
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              .csv
             </span>
             <span className="flex items-center gap-1.5 rounded-full border bg-muted/40 px-3 py-1">
               <FileImage className="h-3.5 w-3.5" />

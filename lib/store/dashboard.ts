@@ -17,6 +17,12 @@ export type Row = Record<string, string | number | boolean | null>
 /** 対応するチャートの種別 */
 export type ChartType = 'bar' | 'line' | 'area' | 'pie' | 'radar' | 'scatter'
 
+/** グリッド内のカラム占有幅 */
+export type ColSpan = 1 | 2 | 3
+
+/** X軸が重複するデータの集計方法 */
+export type Aggregation = 'none' | 'sum' | 'avg' | 'count'
+
 /** 1つのチャートの設定 */
 export interface ChartConfig {
   id: string
@@ -24,10 +30,12 @@ export interface ChartConfig {
   type: ChartType
   xAxisKey: string
   yAxisKeys: string[]
+  colSpan: ColSpan
+  aggregation: Aggregation
 }
 
 /** アップロード済みファイルの種別 */
-export type FileType = 'xlsx' | 'xls' | 'svg'
+export type FileType = 'xlsx' | 'xls' | 'csv' | 'svg'
 
 // ストアの State 定義
 interface DashboardState {
@@ -66,9 +74,14 @@ interface DashboardActions {
 
   /**
    * 新しいチャートを追加する。
-   * id は内部で自動生成する。
+   * id / colSpan / aggregation は省略時にデフォルト値が設定される。
    */
-  addChart: (config: Omit<ChartConfig, 'id'>) => void
+  addChart: (
+    config: Omit<ChartConfig, 'id' | 'colSpan' | 'aggregation'> & {
+      colSpan?: ColSpan
+      aggregation?: Aggregation
+    },
+  ) => void
 
   /**
    * 指定した ID のチャートを削除する。
@@ -120,7 +133,7 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
 
   addChart: (config) => {
     const id = nanoid()
-    const newChart: ChartConfig = { ...config, id }
+    const newChart: ChartConfig = { colSpan: 1, aggregation: 'none', ...config, id }
     set((state) => ({
       charts: [...state.charts, newChart],
       chartOrder: [...state.chartOrder, id],

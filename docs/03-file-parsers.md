@@ -2,7 +2,7 @@
 
 ## 概要
 
-Excel (.xlsx / .xls) と SVG ファイルを解析して、
+Excel (.xlsx / .xls)、CSV (.csv)、SVG ファイルを解析して、
 `Column[]` と `Row[]` の形式に変換するロジックを実装する。
 パースした結果は Zustand ストアに格納する。
 
@@ -14,9 +14,10 @@ Excel (.xlsx / .xls) と SVG ファイルを解析して、
 lib/
 └── parsers/
     ├── excel.ts     ← xlsx (SheetJS) を使った Excel 解析
+    ├── csv.ts       ← xlsx (SheetJS) を使った CSV 解析
     └── svg.ts       ← svgson を使った SVG 解析
 hooks/
-└── useFileParser.ts ← 上記 2 つのパーサーを呼び分ける custom hook
+└── useFileParser.ts ← 上記 3 つのパーサーを呼び分ける custom hook
 ```
 
 ---
@@ -139,7 +140,118 @@ export function parseExcel(
 
 ---
 
-## 3. SVG パーサー
+## 3. CSV パーサー
+
+### `lib/parsers/csv.ts`
+
+```typescript
+import * as XLSX from 'xlsx'
+import type { Column, ColumnType, Row } from '@/lib/store/dashboard'
+
+/**
+ * セルの値リストからカラムのデータ型を推論する。
+ * すべての非null値が数値に変換できる場合は 'number'、それ以外は 'string' とする。
+ */
+function inferColumnType(values: unknown[]): ColumnType {
+  const nonNull = values.filter(
+    (v) => v !== null && v !== undefined && v !== ''
+  )
+  if (nonNull.length === 0) return 'string'
+  const allNumeric = nonNull.every(
+    (v) => typeof v === 'number' || (typeof v === 'string' && !isNaN(Number(v)))
+  )
+  return allNumeric ? 'number' : 'string'
+}
+
+/**
+ * CSV ファイルを解析して Column[] と Row[] を返す。
+ * SheetJS の type: 'string' を使い、テキストとして読み込む。
+ */
+export function parseCsv(
+  file: File
+): Promise<{ columns: Column[]; rows: Row[] }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result
+        if (typeof text !== 'string') {
+          throw new Error('ファイルの読み込み結果が空です')
+        }
+
+        const workbook = XLSX.read(text, { type: 'string' })
+        const sheetName = workbook.SheetNames[0]
+
+        if (!sheetName) {
+          resolve({ columns: [], rows: [] })
+          return
+        }
+
+        const sheet = workbook.Sheets[sheetName]
+
+        const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(
+          sheet,
+          { defval: null }
+        )
+
+        if (jsonData.length === 0) {
+          resolve({ columns: [], rows: [] })
+          return
+        }
+
+        const keys = Object.keys(jsonData[0])
+
+        const columns: Column[] = keys.map((key) => ({
+          key,
+          label: key,
+          type: inferColumnType(jsonData.map((row) => row[key])),
+        }))
+
+        const rows: Row[] = jsonData.map((rawRow) => {
+          const normalized: Row = {}
+          for (const key of keys) {
+            const val = rawRow[key]
+            if (val === null || val === undefined) {
+              normalized[key] = null
+            } else if (typeof val === 'number') {
+              normalized[key] = val
+            } else if (typeof val === 'boolean') {
+              normalized[key] = val
+            } else {
+              const asNumber = Number(val)
+              normalized[key] =
+                typeof val === 'string' && val.trim() !== '' && !isNaN(asNumber)
+                  ? asNumber
+                  : String(val)
+            }
+          }
+          return normalized
+        })
+
+        resolve({ columns, rows })
+      } catch (err) {
+        reject(
+          err instanceof Error
+            ? err
+            : new Error('CSV ファイルの解析に失敗しました')
+        )
+      }
+    }
+
+    reader.onerror = () => {
+      reject(new Error('ファイルの読み込みに失敗しました'))
+    }
+
+    // CSV はテキストとして読み込む（SheetJS の type: 'string' に対応）
+    reader.readAsText(file)
+  })
+}
+```
+
+---
+
+## 4. SVG パーサー
 
 ### `lib/parsers/svg.ts`
 
@@ -271,7 +383,7 @@ export async function parseSvgFile(
 
 ---
 
-## 4. useFileParser フック
+## 5. useFileParser フック
 
 ### `hooks/useFileParser.ts`
 
@@ -281,6 +393,7 @@ export async function parseSvgFile(
 import { useState, useCallback } from 'react'
 import { useDashboardStore } from '@/lib/store/dashboard'
 import { parseExcel } from '@/lib/parsers/excel'
+import { parseCsv } from '@/lib/parsers/csv'
 import { parseSvgFile } from '@/lib/parsers/svg'
 
 /** ファイル解析の状態 */
@@ -323,6 +436,14 @@ export function useFileParser(): UseFileParserReturn {
             columns,
             rows,
           })
+        } else if (extension === 'csv') {
+          const { columns, rows } = await parseCsv(file)
+          setFileData({
+            fileName: file.name,
+            fileType: 'csv',
+            columns,
+            rows,
+          })
         } else if (extension === 'svg') {
           const { columns, rows } = await parseSvgFile(file)
           setFileData({
@@ -334,7 +455,7 @@ export function useFileParser(): UseFileParserReturn {
         } else {
           throw new Error(
             `非対応のファイル形式です: .${extension ?? '不明'}\n` +
-              '.xlsx / .xls / .svg のいずれかをアップロードしてください'
+              '.xlsx / .xls / .csv / .svg のいずれかをアップロードしてください'
           )
         }
 
@@ -355,13 +476,14 @@ export function useFileParser(): UseFileParserReturn {
 
 ---
 
-## 5. 注意事項
+## 6. 注意事項
 
-### xlsx の `type: 'array'` について
+### xlsx の `type` オプションについて
 
 SheetJS の `XLSX.read()` は `type: 'binary'` でも動作するが、
 `FileReader.readAsBinaryString()` は非推奨となっているため、
-`type: 'array'` + `FileReader.readAsArrayBuffer()` の組み合わせを使用する。
+Excel は `type: 'array'` + `FileReader.readAsArrayBuffer()`、
+CSV は `type: 'string'` + `FileReader.readAsText()` の組み合わせを使用する。
 
 ### SVG データの性質について
 
@@ -376,7 +498,7 @@ SVG は本来グラフィックスのフォーマットであり、
 
 ### クライアントサイド専用
 
-`parseExcel` と `parseSvgFile` は `FileReader` と `File.text()` を使用するため、
+`parseExcel`、`parseCsv`、`parseSvgFile` は `FileReader` と `File.text()` を使用するため、
 必ずクライアントサイドで実行される。
 Server Component や Server Action から直接呼び出してはならない。
 `useFileParser` フックに `'use client'` ディレクティブを付与しているため、
@@ -384,6 +506,6 @@ Server Component や Server Action から直接呼び出してはならない。
 
 ---
 
-## 6. 次のステップへ
+## 7. 次のステップへ
 
 Step 03 完了後、Step 04 で DropZone コンポーネントの実装に進む。

@@ -29,7 +29,7 @@ npm install \
 | パッケージ | 役割 |
 |-----------|------|
 | `react-dropzone` | ドラッグ＆ドロップ対応のファイルアップロードゾーン |
-| `xlsx` | Excel (.xlsx / .xls) ファイルの解析（SheetJS）|
+| `xlsx` | Excel (.xlsx / .xls) および CSV (.csv) ファイルの解析（SheetJS）|
 | `svgson` | SVG ファイルを JSON 構造に変換 |
 | `recharts` | React 向けチャートライブラリ（shadcn chart が内部で使用）|
 | `@dnd-kit/core` | ドラッグ＆ドロップのコア機能 |

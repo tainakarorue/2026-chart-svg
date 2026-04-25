@@ -190,7 +190,7 @@ ChartGrid は `grid-cols-1 sm:grid-cols-2 xl:grid-cols-3` で
     ↓
 2. useFileParser の parseFile() が呼ばれる
     ↓
-3. 拡張子判定 → parseExcel() または parseSvgFile() を実行
+3. 拡張子判定 → parseExcel() / parseCsv() / parseSvgFile() を実行
     ↓
 4. { columns: Column[], rows: Row[] } が返る
     ↓
@@ -237,8 +237,9 @@ ChartGrid は `grid-cols-1 sm:grid-cols-2 xl:grid-cols-3` で
 - [ ] `npm run dev` でエラーなく起動する
 - [ ] `.xlsx` ファイルをドラッグ＆ドロップするとテーブルとグリッドが表示される
 - [ ] `.xls` ファイルもアップロード可能
+- [ ] `.csv` ファイルをアップロードするとテーブルとグリッドが表示される
 - [ ] `.svg` ファイルをアップロードすると SVG 要素の属性がテーブル化される
-- [ ] 非対応ファイル（.csv など）をドロップすると赤いボーダーとエラーが表示される
+- [ ] 非対応ファイル（.pdf など）をドロップすると赤いボーダーとエラーが表示される
 - [ ] 「グラフを追加」ボタンでモーダルが開く
 - [ ] タイトル・種別・X軸・Y軸を設定してグラフが追加される
 - [ ] 6 種類のグラフ（棒・折れ線・エリア・円・レーダー・散布図）が正しく描画される
@@ -285,7 +286,7 @@ export const dashboardRouter = createTRPCRouter({
     .input(
       z.object({
         fileName: z.string(),
-        fileType: z.enum(['xlsx', 'xls', 'svg']),
+        fileType: z.enum(['xlsx', 'xls', 'csv', 'svg']),
         columns: z.array(
           z.object({
             key: z.string(),
