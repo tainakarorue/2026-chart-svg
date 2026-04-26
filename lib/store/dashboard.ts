@@ -35,7 +35,7 @@ export interface ChartConfig {
 }
 
 /** アップロード済みファイルの種別 */
-export type FileType = 'xlsx' | 'xls' | 'csv' | 'svg'
+export type FileType = 'xlsx' | 'xls' | 'csv'
 
 // ストアの State 定義
 interface DashboardState {

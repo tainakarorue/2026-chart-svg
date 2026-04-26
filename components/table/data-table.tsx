@@ -51,7 +51,6 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 export function DataTable({ columns, rows }: DataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = useState('')
-  const [pageSize, setPageSize] = useState(20)
 
   /**
    * TanStack Table の ColumnDef を Column[] から動的に生成する。
@@ -128,10 +127,12 @@ export function DataTable({ columns, rows }: DataTableProps) {
   const table = useReactTable({
     data: rows,
     columns: tableColumnDefs,
+    initialState: {
+      pagination: { pageIndex: 0, pageSize: 20 },
+    },
     state: {
       sorting,
       globalFilter,
-      pagination: { pageIndex: 0, pageSize },
     },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
@@ -139,7 +140,6 @@ export function DataTable({ columns, rows }: DataTableProps) {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    // ページインデックスはグローバルフィルター変更時にリセットする
     autoResetPageIndex: true,
   })
 
@@ -238,12 +238,8 @@ export function DataTable({ columns, rows }: DataTableProps) {
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>表示件数:</span>
           <Select
-            value={String(pageSize)}
-            onValueChange={(val) => {
-              const size = Number(val)
-              setPageSize(size)
-              table.setPageSize(size)
-            }}
+            value={String(table.getState().pagination.pageSize)}
+            onValueChange={(val) => table.setPageSize(Number(val))}
           >
             <SelectTrigger className="h-8 w-20">
               <SelectValue />

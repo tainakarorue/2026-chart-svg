@@ -4,7 +4,6 @@ import { useState, useCallback } from 'react'
 import { useDashboardStore } from '@/lib/store/dashboard'
 import { parseExcel } from '@/lib/parsers/excel'
 import { parseCsv } from '@/lib/parsers/csv'
-import { parseSvgFile } from '@/lib/parsers/svg'
 
 /** ファイル解析の状態 */
 export type ParseStatus = 'idle' | 'parsing' | 'success' | 'error'
@@ -54,18 +53,10 @@ export function useFileParser(): UseFileParserReturn {
             columns,
             rows,
           })
-        } else if (extension === 'svg') {
-          const { columns, rows } = await parseSvgFile(file)
-          setFileData({
-            fileName: file.name,
-            fileType: 'svg',
-            columns,
-            rows,
-          })
         } else {
           throw new Error(
             `非対応のファイル形式です: .${extension ?? '不明'}\n` +
-              '.xlsx / .xls / .csv / .svg のいずれかをアップロードしてください',
+              '.xlsx / .xls / .csv のいずれかをアップロードしてください',
           )
         }
 

@@ -5,7 +5,6 @@ import { useDropzone, type FileRejection } from 'react-dropzone'
 import {
   UploadCloud,
   FileSpreadsheet,
-  FileImage,
   AlertCircle,
   Loader2,
 } from 'lucide-react'
@@ -20,7 +19,6 @@ import { Button } from '@/components/ui/button'
  * .xlsx: Excel 2007以降のオープン XML 形式
  * .xls:  Excel 97-2003 形式
  * .csv:  カンマ区切りテキスト
- * .svg:  SVG 画像
  */
 const ACCEPTED_FILE_TYPES = {
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': [
@@ -28,7 +26,6 @@ const ACCEPTED_FILE_TYPES = {
   ],
   'application/vnd.ms-excel': ['.xls'],
   'text/csv': ['.csv'],
-  'image/svg+xml': ['.svg'],
 }
 
 export const DropZone = () => {
@@ -152,10 +149,6 @@ export const DropZone = () => {
             <span className="flex items-center gap-1.5 rounded-full border bg-muted/40 px-3 py-1">
               <FileSpreadsheet className="h-3.5 w-3.5" />
               .csv
-            </span>
-            <span className="flex items-center gap-1.5 rounded-full border bg-muted/40 px-3 py-1">
-              <FileImage className="h-3.5 w-3.5" />
-              .svg
             </span>
           </div>
 
