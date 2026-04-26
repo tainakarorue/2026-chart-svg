@@ -39,6 +39,8 @@ export type FileType = 'xlsx' | 'xls' | 'csv'
 
 // ストアの State 定義
 interface DashboardState {
+  /** DB に保存済みのデータセット ID。null の場合は未保存（ローカルのみ） */
+  datasetId: string | null
   /** アップロードされたファイル名。null の場合はアップロード画面を表示 */
   fileName: string | null
   /** アップロードされたファイルの種別 */
@@ -55,6 +57,9 @@ interface DashboardState {
 
 // ストアの Actions 定義
 interface DashboardActions {
+  /** DB 保存後の datasetId をセットする */
+  setDatasetId: (id: string | null) => void
+
   /**
    * ファイルのパース結果をストアに格納する。
    * 既存のチャートはリセットされる。
@@ -73,11 +78,26 @@ interface DashboardActions {
   resetFile: () => void
 
   /**
+   * DB から取得したデータセットでストアを復元する。
+   * ページリロード後に /dashboard/[datasetId] から呼び出す。
+   */
+  restoreFromDataset: (params: {
+    datasetId: string
+    fileName: string
+    fileType: FileType
+    columns: Column[]
+    rows: Row[]
+    charts: ChartConfig[]
+  }) => void
+
+  /**
    * 新しいチャートを追加する。
    * id / colSpan / aggregation は省略時にデフォルト値が設定される。
+   * id を指定した場合（DB 保存済み ID と揃える場合）はそちらを使用する。
    */
   addChart: (
     config: Omit<ChartConfig, 'id' | 'colSpan' | 'aggregation'> & {
+      id?: string
       colSpan?: ColSpan
       aggregation?: Aggregation
     },
@@ -104,6 +124,7 @@ type DashboardStore = DashboardState & DashboardActions
 
 // 初期状態
 const initialState: DashboardState = {
+  datasetId: null,
   fileName: null,
   fileType: null,
   columns: [],
@@ -116,8 +137,12 @@ const initialState: DashboardState = {
 
 export const useDashboardStore = create<DashboardStore>((set) => ({
   ...initialState,
+
+  setDatasetId: (id) => set({ datasetId: id }),
+
   setFileData: ({ fileName, fileType, columns, rows }) => {
     set({
+      datasetId: null,
       fileName,
       fileType,
       columns,
@@ -131,8 +156,20 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
     set({ ...initialState })
   },
 
+  restoreFromDataset: ({ datasetId, fileName, fileType, columns, rows, charts }) => {
+    set({
+      datasetId,
+      fileName,
+      fileType,
+      columns,
+      rows,
+      charts,
+      chartOrder: charts.map((c) => c.id),
+    })
+  },
+
   addChart: (config) => {
-    const id = nanoid()
+    const id = config.id ?? nanoid()
     const newChart: ChartConfig = { colSpan: 1, aggregation: 'none', ...config, id }
     set((state) => ({
       charts: [...state.charts, newChart],

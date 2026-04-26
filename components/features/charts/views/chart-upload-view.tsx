@@ -1,15 +1,19 @@
 'use client'
 
-import { FileX, BarChart2 } from 'lucide-react'
+import { FileX, BarChart2, Save, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { useDashboardStore } from '@/lib/store/dashboard'
 import { DropZone } from '@/components/upload/drop-zone'
 import { ChartGrid } from '@/components/charts/chart-grid'
 import { DataTable } from '@/components/table/data-table'
+import { authClient } from '@/lib/auth-client'
+import { useSaveDashboard } from '@/hooks/use-save-dashboard'
 
 export function ChartUploadView() {
   const { fileName, fileType, columns, rows, resetFile } = useDashboardStore()
+  const { data: session } = authClient.useSession()
+  const { save, isSaving, canSave } = useSaveDashboard()
 
   // ファイルが未アップロードの場合はアップロード画面を全画面表示
   if (!fileName) {
@@ -46,17 +50,38 @@ export function ChartUploadView() {
           </span>
         </div>
 
-        {/* リセットボタン */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={resetFile}
-          className="shrink-0 gap-1.5"
-        >
-          <FileX className="h-4 w-4" />
-          <span className="hidden sm:inline">ファイルをリセット</span>
-          <span className="sm:hidden">リセット</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* 保存ボタン（ログイン済みのみ表示） */}
+          {session && (
+            <Button
+              size="sm"
+              onClick={save}
+              disabled={!canSave || isSaving}
+              className="shrink-0 gap-1.5"
+            >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              <span className="hidden sm:inline">
+                {isSaving ? '保存中...' : '保存'}
+              </span>
+            </Button>
+          )}
+
+          {/* リセットボタン */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={resetFile}
+            className="shrink-0 gap-1.5"
+          >
+            <FileX className="h-4 w-4" />
+            <span className="hidden sm:inline">ファイルをリセット</span>
+            <span className="sm:hidden">リセット</span>
+          </Button>
+        </div>
       </header>
 
       {/* メインコンテンツ */}
