@@ -62,7 +62,7 @@ export const MainUserMenu = ({
       <SidebarMenuButton asChild className="py-5">
         <Link href="/sign-in">
           <LogInIcon />
-          <span>Sign in</span>
+          <span>サインイン</span>
         </Link>
       </SidebarMenuButton>
     )
@@ -77,18 +77,18 @@ export const MainUserMenu = ({
         </SidebarMenuButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48 space-y-2">
-        <DropdownMenuLabel>
+        <div className="px-2 py-1.5">
           <UserAvatar name={user.name} email={user.email} image={user.image} />
-        </DropdownMenuLabel>
+        </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onLogout} disabled={isLoggingOut}>
           <LogOutIcon />
-          <span>Sign out</span>
+          <span>サインアウト</span>
         </DropdownMenuItem>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <SunIcon />
-            <span>Theme</span>
+            <span>テーマ</span>
           </DropdownMenuSubTrigger>
           <DropdownMenuPortal>
             <DropdownMenuSubContent>

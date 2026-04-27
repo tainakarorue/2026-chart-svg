@@ -10,6 +10,7 @@ import { loadSearchParams } from '@/modules/dashboard/params/search-params'
 import { DatasetList } from '@/components/features/dashboard/dataset-list'
 import { DatasetListSkeleton } from '@/components/features/dashboard/dataset-list-skeleton'
 import { DatasetListError } from '@/components/features/dashboard/dataset-list-error'
+import { DatasetSearchForm } from '@/components/features/dashboard/dataset-search-form'
 import { Button } from '@/components/ui/button'
 
 interface Props {
@@ -46,6 +47,8 @@ export default async function DashboardPage({ searchParams }: Props) {
             </Link>
           </Button>
         </div>
+
+        <DatasetSearchForm />
 
         <ErrorBoundary FallbackComponent={DatasetListError}>
           <Suspense fallback={<DatasetListSkeleton />}>

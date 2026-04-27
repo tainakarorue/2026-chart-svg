@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils'
 import { TRPCReactProvider } from '@/trpc/client'
 import { ThemeProvider } from '@/components/providers/theme-provider'
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
+import { TooltipProvider } from '@/components/ui/tooltip'
+
 import './globals.css'
 
 const playfairDisplayHeading = Playfair_Display({
@@ -60,7 +62,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <TRPCReactProvider>
-            <NuqsAdapter>{children}</NuqsAdapter>
+            <NuqsAdapter>
+              <TooltipProvider>{children}</TooltipProvider>
+            </NuqsAdapter>
           </TRPCReactProvider>
         </ThemeProvider>
       </body>

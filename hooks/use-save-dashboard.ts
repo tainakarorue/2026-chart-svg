@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useTRPC } from '@/trpc/client'
 import { useDashboardStore } from '@/lib/store/dashboard'
+import { useCheckout } from '@/hooks/use-checkout'
 
 export function useSaveDashboard() {
   const trpc = useTRPC()
@@ -24,6 +25,7 @@ export function useSaveDashboard() {
     .map((id) => charts.find((c) => c.id === id))
     .filter((c): c is NonNullable<typeof c> => c !== undefined)
 
+  const { redirectToCheckout } = useCheckout()
   const mutation = useMutation(trpc.datasets.saveWithCharts.mutationOptions())
 
   function save() {
@@ -57,7 +59,13 @@ export function useSaveDashboard() {
         },
         onError: (err) => {
           if (err.message === 'FREE_TIER_LIMIT') {
-            toast.error('無料プランの上限（5件）に達しています')
+            toast.error('無料プランの上限（5件）に達しています', {
+              description: 'プランをアップグレードすると無制限に作成できます。',
+              action: {
+                label: 'アップグレード',
+                onClick: redirectToCheckout,
+              },
+            })
           } else {
             toast.error('保存に失敗しました')
           }

@@ -3,7 +3,11 @@ import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useSidebar } from '@/components/ui/sidebar'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Tooltip, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 interface Props {
   name: string
@@ -24,10 +28,23 @@ export const UserAvatar = ({ name, image, email, className }: Props) => {
       </Avatar>
       <div className="flex flex-col">
         <Tooltip>
-          <TooltipTrigger asChild></TooltipTrigger>
+          <TooltipTrigger asChild>
+            <span>{name}</span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <span className="text-sm font-medium truncate">{name}</span>
+          </TooltipContent>
         </Tooltip>
-        <span className="text-sm font-medium truncate">{name}</span>
-        <span className="text-xs text-muted-foreground truncate">{email}</span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span>{email}</span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <span className="text-xs text-muted-foreground truncate">
+              {email}
+            </span>
+          </TooltipContent>
+        </Tooltip>
       </div>
     </div>
   )

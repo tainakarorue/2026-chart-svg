@@ -24,14 +24,14 @@ import { MainUserMenu } from './main-user-menu'
 // Menu items.
 const items = [
   {
-    title: 'Home',
+    title: 'ホーム',
     url: '/',
     icon: Home,
   },
 ]
 const userItems = [
   {
-    title: 'User Dashboard',
+    title: 'ダッシュボード',
     url: '/dashboard',
     icon: FileIcon,
   },
@@ -56,6 +56,7 @@ export const MainSidebar = () => {
                         alt="Logo"
                         width={24}
                         height={24}
+                        style={{ width: '32px', height: '32px' }}
                       />
                       <span>SVC to Graph</span>
                     </Link>
@@ -66,7 +67,7 @@ export const MainSidebar = () => {
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <SidebarGroupLabel>Menu</SidebarGroupLabel>
+          <SidebarGroupLabel>メニュー</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
@@ -85,7 +86,7 @@ export const MainSidebar = () => {
 
         {session && (
           <SidebarGroup>
-            <SidebarGroupLabel>User</SidebarGroupLabel>
+            <SidebarGroupLabel>ユーザー</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {userItems.map((item) => (
