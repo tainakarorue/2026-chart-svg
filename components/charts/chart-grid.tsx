@@ -20,12 +20,19 @@ import {
 } from '@dnd-kit/sortable'
 import { cn } from '@/lib/utils'
 import { useDashboardStore } from '@/lib/store/dashboard'
+import type { Row } from '@/lib/store/dashboard'
 import { ChartCard } from './chart-card'
 import { AddChartCard } from './add-chart-card'
 import { ChartModal } from './chart-modal'
 
-export function ChartGrid() {
+interface ChartGridProps {
+  rows?: Row[]
+}
+
+export function ChartGrid({ rows: rowsProp }: ChartGridProps = {}) {
   const { charts, chartOrder, reorderCharts } = useDashboardStore()
+  const storeRows = useDashboardStore((s) => s.rows)
+  const rows = rowsProp ?? storeRows
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
 
@@ -82,6 +89,7 @@ export function ChartGrid() {
               <ChartCard
                 key={chart.id}
                 chart={chart}
+                rows={rows}
                 className={cn(
                   chart.colSpan === 2 && 'sm:col-span-2',
                   chart.colSpan === 3 && 'sm:col-span-2 xl:col-span-3',
@@ -97,6 +105,7 @@ export function ChartGrid() {
           {activeChart ? (
             <ChartCard
               chart={activeChart}
+              rows={rows}
               className="shadow-2xl opacity-95"
             />
           ) : null}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   flexRender,
   getCoreRowModel,
@@ -29,6 +29,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -36,19 +42,23 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Download,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Column, Row } from '@/lib/store/dashboard'
+import { exportToCsv, exportToExcel } from '@/lib/export'
 
 interface DataTableProps {
   columns: Column[]
   rows: Row[]
+  fileName?: string
+  onFilteredRowsChange?: (rows: Row[]) => void
 }
 
 /** 1ページあたりの表示行数の選択肢 */
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 
-export function DataTable({ columns, rows }: DataTableProps) {
+export function DataTable({ columns, rows, fileName, onFilteredRowsChange }: DataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = useState('')
 
@@ -143,10 +153,19 @@ export function DataTable({ columns, rows }: DataTableProps) {
     autoResetPageIndex: true,
   })
 
+  const sortedRows = table.getSortedRowModel().rows
+
+  useEffect(() => {
+    onFilteredRowsChange?.(sortedRows.map((r) => r.original))
+  }, [sortedRows, onFilteredRowsChange])
+
   const filteredCount = table.getFilteredRowModel().rows.length
   const totalCount = rows.length
   const currentPage = table.getState().pagination.pageIndex + 1
   const totalPages = table.getPageCount()
+
+  const exportRows = sortedRows.map((r) => r.original)
+  const baseName = fileName ?? 'export'
 
   return (
     <div className="flex flex-col gap-4">
@@ -170,6 +189,23 @@ export function DataTable({ columns, rows }: DataTableProps) {
             <>{totalCount.toLocaleString()} 件</>
           )}
         </span>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Download className="h-4 w-4" />
+              エクスポート
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => exportToCsv(exportRows, columns, baseName)}>
+              CSV でダウンロード
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => exportToExcel(exportRows, columns, baseName)}>
+              Excel でダウンロード
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* テーブル本体 */}

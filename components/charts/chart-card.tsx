@@ -8,17 +8,19 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useDashboardStore } from '@/lib/store/dashboard'
 import { ChartRenderer } from './chart-renderer'
-import type { ChartConfig, ColSpan } from '@/lib/store/dashboard'
+import type { ChartConfig, ColSpan, Row } from '@/lib/store/dashboard'
 
 interface ChartCardProps {
   chart: ChartConfig
   className?: string
+  rows?: Row[]
 }
 
-export function ChartCard({ chart, className }: ChartCardProps) {
+export function ChartCard({ chart, className, rows: rowsProp }: ChartCardProps) {
   const removeChart = useDashboardStore((state) => state.removeChart)
   const updateChart = useDashboardStore((state) => state.updateChart)
-  const rows = useDashboardStore((state) => state.rows)
+  const storeRows = useDashboardStore((state) => state.rows)
+  const rows = rowsProp ?? storeRows
 
   function cycleColSpan() {
     const next = ((chart.colSpan % 3) + 1) as ColSpan

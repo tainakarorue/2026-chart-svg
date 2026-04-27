@@ -1,9 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import { FileX, BarChart2, Save, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useDashboardStore } from '@/lib/store/dashboard'
+import type { Row } from '@/lib/store/dashboard'
 import { DropZone } from '@/components/upload/drop-zone'
 import { ChartGrid } from '@/components/charts/chart-grid'
 import { DataTable } from '@/components/table/data-table'
@@ -14,6 +17,8 @@ export function ChartUploadView() {
   const { fileName, fileType, columns, rows, resetFile } = useDashboardStore()
   const { data: session } = authClient.useSession()
   const { save, isSaving, canSave } = useSaveDashboard()
+  const [filteredRows, setFilteredRows] = useState<Row[] | null>(null)
+  const [syncChart, setSyncChart] = useState(false)
 
   // ファイルが未アップロードの場合はアップロード画面を全画面表示
   if (!fileName) {
@@ -93,8 +98,17 @@ export function ChartUploadView() {
               グラフ
             </h2>
             <Separator className="flex-1" />
+            <ToggleGroup
+              type="single"
+              value={syncChart ? 'filtered' : 'all'}
+              onValueChange={(v) => setSyncChart(v === 'filtered')}
+              size="sm"
+            >
+              <ToggleGroupItem value="all">全データ</ToggleGroupItem>
+              <ToggleGroupItem value="filtered">フィルター済み</ToggleGroupItem>
+            </ToggleGroup>
           </div>
-          <ChartGrid />
+          <ChartGrid rows={syncChart && filteredRows ? filteredRows : undefined} />
         </section>
 
         {/* データテーブルセクション */}
@@ -105,7 +119,12 @@ export function ChartUploadView() {
             </h2>
             <Separator className="flex-1" />
           </div>
-          <DataTable columns={columns} rows={rows} />
+          <DataTable
+            columns={columns}
+            rows={rows}
+            fileName={fileName ?? 'export'}
+            onFilteredRowsChange={setFilteredRows}
+          />
         </section>
       </main>
     </div>
