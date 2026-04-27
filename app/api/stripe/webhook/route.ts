@@ -34,6 +34,8 @@ export async function POST(req: NextRequest) {
       const userId = session.metadata?.userId
       if (!userId) break
 
+      const periodEnd = stripeSub.items.data[0].current_period_end
+
       await db
         .insert(subscription)
         .values({
@@ -43,7 +45,7 @@ export async function POST(req: NextRequest) {
           stripeSubscriptionId: stripeSub.id,
           stripePriceId: stripeSub.items.data[0].price.id,
           status: stripeSub.status as SubscriptionStatus,
-          currentPeriodEnd: new Date(stripeSub.current_period_end * 1000),
+          currentPeriodEnd: new Date(periodEnd * 1000),
         })
         .onConflictDoUpdate({
           target: subscription.userId,
@@ -52,7 +54,7 @@ export async function POST(req: NextRequest) {
             stripeSubscriptionId: stripeSub.id,
             stripePriceId: stripeSub.items.data[0].price.id,
             status: stripeSub.status as SubscriptionStatus,
-            currentPeriodEnd: new Date(stripeSub.current_period_end * 1000),
+            currentPeriodEnd: new Date(periodEnd * 1000),
           },
         })
       break
@@ -61,12 +63,13 @@ export async function POST(req: NextRequest) {
     case 'customer.subscription.updated':
     case 'customer.subscription.deleted': {
       const stripeSub = event.data.object as Stripe.Subscription
+      const periodEnd = stripeSub.items.data[0].current_period_end
       await db
         .update(subscription)
         .set({
           status: stripeSub.status as SubscriptionStatus,
           stripePriceId: stripeSub.items.data[0].price.id,
-          currentPeriodEnd: new Date(stripeSub.current_period_end * 1000),
+          currentPeriodEnd: new Date(periodEnd * 1000),
         })
         .where(eq(subscription.stripeSubscriptionId, stripeSub.id))
       break
@@ -74,7 +77,10 @@ export async function POST(req: NextRequest) {
 
     case 'invoice.payment_failed': {
       const invoice = event.data.object as Stripe.Invoice
-      const subId = invoice.subscription as string | null
+      const subId =
+        invoice.parent?.subscription_details?.subscription != null
+          ? (invoice.parent.subscription_details.subscription as string)
+          : null
       if (!subId) break
       await db
         .update(subscription)

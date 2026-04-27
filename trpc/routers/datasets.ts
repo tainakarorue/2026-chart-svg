@@ -9,11 +9,14 @@ import { dataset, chart, subscription } from '@/src/db/schema'
 const chartInputSchema = z.object({
   id: z.string(),
   title: z.string().min(1),
-  type: z.enum(['bar', 'line', 'area', 'pie', 'radar', 'scatter']),
+  type: z.enum(['bar', 'barHorizontal', 'line', 'area', 'pie', 'donut', 'radar', 'scatter', 'funnel']),
   xAxisKey: z.string(),
   yAxisKeys: z.array(z.string()),
   colSpan: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-  aggregation: z.enum(['none', 'sum', 'avg', 'count']),
+  aggregation: z.enum(['none', 'sum', 'avg', 'count', 'min', 'max']),
+  stacked: z.boolean().optional(),
+  lineType: z.enum(['monotone', 'linear', 'step', 'basis']).optional(),
+  showDots: z.boolean().optional(),
 })
 
 const DEFAULT_LIMIT = 10
@@ -172,6 +175,9 @@ export const datasetsRouter = createTRPCRouter({
               yAxisKeys: c.yAxisKeys,
               colSpan: c.colSpan,
               aggregation: c.aggregation,
+              stacked: c.stacked ?? null,
+              lineType: c.lineType ?? null,
+              showDots: c.showDots ?? null,
               order,
             })),
           )
@@ -219,6 +225,9 @@ export const datasetsRouter = createTRPCRouter({
             yAxisKeys: c.yAxisKeys,
             colSpan: c.colSpan,
             aggregation: c.aggregation,
+            stacked: c.stacked ?? null,
+            lineType: c.lineType ?? null,
+            showDots: c.showDots ?? null,
             order,
           })),
         )

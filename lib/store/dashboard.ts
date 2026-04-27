@@ -15,13 +15,25 @@ export interface Column {
 export type Row = Record<string, string | number | boolean | null>
 
 /** 対応するチャートの種別 */
-export type ChartType = 'bar' | 'line' | 'area' | 'pie' | 'radar' | 'scatter'
+export type ChartType =
+  | 'bar'
+  | 'barHorizontal'
+  | 'line'
+  | 'area'
+  | 'pie'
+  | 'donut'
+  | 'radar'
+  | 'scatter'
+  | 'funnel'
 
 /** グリッド内のカラム占有幅 */
 export type ColSpan = 1 | 2 | 3
 
 /** X軸が重複するデータの集計方法 */
-export type Aggregation = 'none' | 'sum' | 'avg' | 'count'
+export type Aggregation = 'none' | 'sum' | 'avg' | 'count' | 'min' | 'max'
+
+/** 折れ線・エリアの曲線形状 */
+export type LineType = 'monotone' | 'linear' | 'step' | 'basis'
 
 /** 1つのチャートの設定 */
 export interface ChartConfig {
@@ -32,6 +44,12 @@ export interface ChartConfig {
   yAxisKeys: string[]
   colSpan: ColSpan
   aggregation: Aggregation
+  /** bar / barHorizontal / area: 積み上げ表示 */
+  stacked?: boolean
+  /** line / area: 曲線の形状 */
+  lineType?: LineType
+  /** line: データ点のドット表示 */
+  showDots?: boolean
 }
 
 /** アップロード済みファイルの種別 */

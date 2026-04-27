@@ -6,9 +6,12 @@ import { createTRPCRouter, authedProcedure } from '../init'
 import { db } from '@/src/db'
 import { chart, dataset } from '@/src/db/schema'
 
-const chartTypeSchema = z.enum(['bar', 'line', 'area', 'pie', 'radar', 'scatter'])
+const chartTypeSchema = z.enum([
+  'bar', 'barHorizontal', 'line', 'area', 'pie', 'donut', 'radar', 'scatter', 'funnel',
+])
 const colSpanSchema = z.union([z.literal(1), z.literal(2), z.literal(3)])
-const aggregationSchema = z.enum(['none', 'sum', 'avg', 'count'])
+const aggregationSchema = z.enum(['none', 'sum', 'avg', 'count', 'min', 'max'])
+const lineTypeSchema = z.enum(['monotone', 'linear', 'step', 'basis'])
 
 export const chartsRouter = createTRPCRouter({
   create: authedProcedure
@@ -22,6 +25,9 @@ export const chartsRouter = createTRPCRouter({
         yAxisKeys: z.array(z.string()).min(1),
         colSpan: colSpanSchema.default(1),
         aggregation: aggregationSchema.default('none'),
+        stacked: z.boolean().optional(),
+        lineType: lineTypeSchema.optional(),
+        showDots: z.boolean().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -50,6 +56,9 @@ export const chartsRouter = createTRPCRouter({
         yAxisKeys: input.yAxisKeys,
         colSpan: input.colSpan,
         aggregation: input.aggregation,
+        stacked: input.stacked ?? null,
+        lineType: input.lineType ?? null,
+        showDots: input.showDots ?? null,
         order: Number(maxOrder) + 1,
       })
       return { id }
@@ -65,6 +74,9 @@ export const chartsRouter = createTRPCRouter({
         yAxisKeys: z.array(z.string()).min(1).optional(),
         colSpan: colSpanSchema.optional(),
         aggregation: aggregationSchema.optional(),
+        stacked: z.boolean().optional(),
+        lineType: lineTypeSchema.optional(),
+        showDots: z.boolean().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {

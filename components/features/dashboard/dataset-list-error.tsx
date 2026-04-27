@@ -11,7 +11,7 @@ export function DatasetListError({ error, resetErrorBoundary }: FallbackProps) {
       <div>
         <p className="font-medium text-sm">一覧の取得に失敗しました</p>
         <p className="text-xs text-muted-foreground mt-1">
-          {error?.message ?? '不明なエラーが発生しました'}
+          {error instanceof Error ? error.message : '不明なエラーが発生しました'}
         </p>
       </div>
       <Button variant="outline" size="sm" onClick={resetErrorBoundary}>

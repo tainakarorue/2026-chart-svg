@@ -20,35 +20,38 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDashboardStore } from '@/lib/store/dashboard'
-import type { Aggregation, ChartType } from '@/lib/store/dashboard'
+import type { Aggregation, ChartType, LineType } from '@/lib/store/dashboard'
 
-/** 集計方法の選択肢 */
-const AGGREGATION_OPTIONS: {
-  value: Aggregation
-  label: string
-  description: string
-}[] = [
-  { value: 'none', label: 'なし', description: 'X軸が一意なとき' },
-  { value: 'sum', label: '合計', description: 'カテゴリー別の合計' },
-  { value: 'avg', label: '平均', description: 'カテゴリー別の平均' },
-  { value: 'count', label: '件数', description: 'レコード数をカウント' },
+const AGGREGATION_OPTIONS: { value: Aggregation; label: string; description: string }[] = [
+  { value: 'none',  label: 'なし',   description: 'X軸が一意なとき' },
+  { value: 'sum',   label: '合計',   description: 'カテゴリー別の合計' },
+  { value: 'avg',   label: '平均',   description: 'カテゴリー別の平均' },
+  { value: 'count', label: '件数',   description: 'レコード数をカウント' },
+  { value: 'min',   label: '最小値', description: 'カテゴリー別の最小' },
+  { value: 'max',   label: '最大値', description: 'カテゴリー別の最大' },
 ]
 
-/** グラフ種別の選択肢 */
-const CHART_TYPE_OPTIONS: {
-  value: ChartType
-  label: string
-  description: string
-}[] = [
-  { value: 'bar', label: '棒グラフ', description: 'カテゴリ間の比較' },
-  { value: 'line', label: '折れ線グラフ', description: '時系列の変化' },
-  { value: 'area', label: 'エリアグラフ', description: '量の推移・合計' },
-  { value: 'pie', label: '円グラフ', description: '割合の比較' },
-  { value: 'radar', label: 'レーダー', description: '多変数の比較' },
-  { value: 'scatter', label: '散布図', description: '2変数の相関' },
+const CHART_TYPE_OPTIONS: { value: ChartType; label: string; description: string }[] = [
+  { value: 'bar',           label: '棒グラフ',     description: 'カテゴリ間の比較' },
+  { value: 'barHorizontal', label: '水平棒グラフ', description: '長いラベル向け' },
+  { value: 'line',          label: '折れ線グラフ', description: '時系列の変化' },
+  { value: 'area',          label: 'エリアグラフ', description: '量の推移・合計' },
+  { value: 'pie',           label: '円グラフ',     description: '割合の比較' },
+  { value: 'donut',         label: 'ドーナツ',     description: '割合＋中央に数値' },
+  { value: 'radar',         label: 'レーダー',     description: '多変数の比較' },
+  { value: 'scatter',       label: '散布図',       description: '2変数の相関' },
+  { value: 'funnel',        label: 'ファネル',     description: 'プロセスの絞り込み' },
+]
+
+const LINE_TYPE_OPTIONS: { value: LineType; label: string }[] = [
+  { value: 'monotone', label: 'スムーズ' },
+  { value: 'linear',   label: '直線' },
+  { value: 'step',     label: 'ステップ' },
+  { value: 'basis',    label: 'ベジェ' },
 ]
 
 interface ChartModalProps {
@@ -59,53 +62,79 @@ interface ChartModalProps {
 export function ChartModal({ open, onOpenChange }: ChartModalProps) {
   const { columns, addChart } = useDashboardStore()
 
-  const [title, setTitle] = useState('')
-  const [chartType, setChartType] = useState<ChartType>('bar')
-  const [xAxisKey, setXAxisKey] = useState<string>('')
-  const [yAxisKeys, setYAxisKeys] = useState<string[]>([])
+  const [title, setTitle]           = useState('')
+  const [chartType, setChartType]   = useState<ChartType>('bar')
+  const [xAxisKey, setXAxisKey]     = useState<string>('')
+  const [yAxisKeys, setYAxisKeys]   = useState<string[]>([])
   const [aggregation, setAggregation] = useState<Aggregation>('none')
+  const [stacked, setStacked]       = useState(false)
+  const [lineType, setLineType]     = useState<LineType>('monotone')
+  const [showDots, setShowDots]     = useState(false)
 
-  /** 数値カラムのみ Y 軸・散布図 X 軸の候補として使用する */
   const numericColumns = columns.filter((col) => col.type === 'number')
-
-  /** 散布図では X 軸も数値カラムのみ有効 */
   const xAxisColumns = chartType === 'scatter' ? numericColumns : columns
 
-  /** Y 軸に追加する（重複は無視） */
+  const showStackedOption  = chartType === 'bar' || chartType === 'barHorizontal' || chartType === 'area'
+  const showLineTypeOption = chartType === 'line' || chartType === 'area'
+  const showShowDotsOption = chartType === 'line'
+
   function handleAddYAxisKey(key: string) {
     if (!yAxisKeys.includes(key)) {
       setYAxisKeys((prev) => [...prev, key])
     }
   }
 
-  /** Y 軸から削除する */
   function handleRemoveYAxisKey(key: string) {
     setYAxisKeys((prev) => prev.filter((k) => k !== key))
   }
 
-  /** グラフを追加してモーダルを閉じる */
+  function handleChartTypeChange(type: ChartType) {
+    setChartType(type)
+    if (
+      type === 'scatter' &&
+      xAxisKey !== '' &&
+      !numericColumns.some((c) => c.key === xAxisKey)
+    ) {
+      setXAxisKey('')
+    }
+    // スタック不可の種別に切り替えたらリセット
+    if (type !== 'bar' && type !== 'barHorizontal' && type !== 'area') {
+      setStacked(false)
+    }
+  }
+
   function handleSubmit() {
     if (!isValid) return
-    addChart({ title: title.trim(), type: chartType, xAxisKey, yAxisKeys, aggregation })
+    addChart({
+      title: title.trim(),
+      type: chartType,
+      xAxisKey,
+      yAxisKeys,
+      aggregation,
+      ...(showStackedOption  && { stacked }),
+      ...(showLineTypeOption && { lineType }),
+      ...(showShowDotsOption && { showDots }),
+    })
     handleClose()
   }
 
-  /** フォームをリセットしてモーダルを閉じる */
   function handleClose() {
     setTitle('')
     setChartType('bar')
     setXAxisKey('')
     setYAxisKeys([])
     setAggregation('none')
+    setStacked(false)
+    setLineType('monotone')
+    setShowDots(false)
     onOpenChange(false)
   }
 
-  const isValid =
-    title.trim().length > 0 && xAxisKey !== '' && yAxisKeys.length > 0
+  const isValid = title.trim().length > 0 && xAxisKey !== '' && yAxisKeys.length > 0
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>グラフを追加</DialogTitle>
           <DialogDescription className="sr-only">
@@ -134,17 +163,7 @@ export function ChartModal({ open, onOpenChange }: ChartModalProps) {
                 <button
                   key={opt.value}
                   type="button"
-                  onClick={() => {
-                    setChartType(opt.value)
-                    // 散布図に切り替えた際、X 軸に非数値カラムが選ばれていたらリセット
-                    if (
-                      opt.value === 'scatter' &&
-                      xAxisKey !== '' &&
-                      !numericColumns.some((c) => c.key === xAxisKey)
-                    ) {
-                      setXAxisKey('')
-                    }
-                  }}
+                  onClick={() => handleChartTypeChange(opt.value)}
                   className={cn(
                     'flex flex-col items-start gap-0.5 rounded-lg border p-3 text-left transition-colors',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -154,9 +173,7 @@ export function ChartModal({ open, onOpenChange }: ChartModalProps) {
                   )}
                 >
                   <span className="text-sm font-medium">{opt.label}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {opt.description}
-                  </span>
+                  <span className="text-xs text-muted-foreground">{opt.description}</span>
                 </button>
               ))}
             </div>
@@ -185,9 +202,7 @@ export function ChartModal({ open, onOpenChange }: ChartModalProps) {
                   xAxisColumns.map((col) => (
                     <SelectItem key={col.key} value={col.key}>
                       <span>{col.label}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        {col.type}
-                      </span>
+                      <span className="ml-2 text-xs text-muted-foreground">{col.type}</span>
                     </SelectItem>
                   ))
                 )}
@@ -214,11 +229,7 @@ export function ChartModal({ open, onOpenChange }: ChartModalProps) {
                   </div>
                 ) : (
                   numericColumns.map((col) => (
-                    <SelectItem
-                      key={col.key}
-                      value={col.key}
-                      disabled={yAxisKeys.includes(col.key)}
-                    >
+                    <SelectItem key={col.key} value={col.key} disabled={yAxisKeys.includes(col.key)}>
                       {col.label}
                     </SelectItem>
                   ))
@@ -226,15 +237,10 @@ export function ChartModal({ open, onOpenChange }: ChartModalProps) {
               </SelectContent>
             </Select>
 
-            {/* 選択済み Y 軸のバッジ一覧 */}
             {yAxisKeys.length > 0 && (
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {yAxisKeys.map((key) => (
-                  <Badge
-                    key={key}
-                    variant="secondary"
-                    className="gap-1.5 pl-2.5 pr-1.5"
-                  >
+                  <Badge key={key} variant="secondary" className="gap-1.5 pl-2.5 pr-1.5">
                     {key}
                     <button
                       type="button"
@@ -258,7 +264,7 @@ export function ChartModal({ open, onOpenChange }: ChartModalProps) {
                 （X軸に重複がある場合の処理）
               </span>
             </Label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {AGGREGATION_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
@@ -273,13 +279,60 @@ export function ChartModal({ open, onOpenChange }: ChartModalProps) {
                   )}
                 >
                   <span className="text-sm font-medium">{opt.label}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {opt.description}
-                  </span>
+                  <span className="text-xs text-muted-foreground">{opt.description}</span>
                 </button>
               ))}
             </div>
           </div>
+
+          {/* 折れ線の形状（line / area のみ） */}
+          {showLineTypeOption && (
+            <div className="flex flex-col gap-1.5">
+              <Label>曲線の形状</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {LINE_TYPE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setLineType(opt.value)}
+                    className={cn(
+                      'rounded-lg border p-2.5 text-center text-sm transition-colors',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      lineType === opt.value
+                        ? 'border-primary bg-primary/8 font-medium text-foreground'
+                        : 'border-border hover:border-primary/40 hover:bg-muted/30 text-foreground',
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 積み上げ / ドット表示（種別依存の追加オプション） */}
+          {(showStackedOption || showShowDotsOption) && (
+            <div className="flex flex-col gap-3">
+              {showStackedOption && (
+                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
+                  <div>
+                    <p className="text-sm font-medium">積み上げ表示</p>
+                    <p className="text-xs text-muted-foreground">Y軸の系列を積み重ねる</p>
+                  </div>
+                  <Switch checked={stacked} onCheckedChange={setStacked} />
+                </div>
+              )}
+              {showShowDotsOption && (
+                <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
+                  <div>
+                    <p className="text-sm font-medium">データ点を表示</p>
+                    <p className="text-xs text-muted-foreground">各点にドットを描画する</p>
+                  </div>
+                  <Switch checked={showDots} onCheckedChange={setShowDots} />
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <DialogFooter>

@@ -10,6 +10,9 @@ import {
   useReactTable,
   type ColumnDef,
   type SortingState,
+  type ColumnFiltersState,
+  type FilterFn,
+  type Column as TColumn,
 } from '@tanstack/react-table'
 import {
   Table,
@@ -21,6 +24,7 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import {
   Select,
   SelectContent,
@@ -35,6 +39,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -43,6 +52,8 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Download,
+  Filter,
+  X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Column, Row } from '@/lib/store/dashboard'
@@ -55,53 +66,234 @@ interface DataTableProps {
   onFilteredRowsChange?: (rows: Row[]) => void
 }
 
-/** 1ページあたりの表示行数の選択肢 */
+type NumberRangeFilter = { min: string; max: string }
+
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
+
+// 数値範囲フィルタ関数
+const numberRangeFilterFn: FilterFn<Row> = (row, columnId, filterValue: NumberRangeFilter) => {
+  const { min, max } = filterValue
+  const val = Number(row.getValue(columnId))
+  if (min !== '' && !isNaN(Number(min)) && val < Number(min)) return false
+  if (max !== '' && !isNaN(Number(max)) && val > Number(max)) return false
+  return true
+}
+numberRangeFilterFn.autoRemove = (val: NumberRangeFilter) => val.min === '' && val.max === ''
+
+// boolean フィルタ関数
+const booleanFilterFn: FilterFn<Row> = (row, columnId, filterValue: string) => {
+  if (!filterValue) return true
+  const val = row.getValue(columnId)
+  return filterValue === 'true' ? val === true : val === false
+}
+booleanFilterFn.autoRemove = (val: string) => !val
+
+// アクティブフィルタのバッジ表示テキストを生成
+function formatFilterBadge(type: Column['type'], label: string, value: unknown): string {
+  if (type === 'number') {
+    const { min, max } = value as NumberRangeFilter
+    if (min && max) return `${label}: ${min} 〜 ${max}`
+    if (min) return `${label}: ≥ ${min}`
+    if (max) return `${label}: ≤ ${max}`
+    return ''
+  }
+  if (type === 'boolean') {
+    return `${label}: ${(value as string) === 'true' ? 'Yes' : 'No'}`
+  }
+  return `${label}: ${String(value)}`
+}
+
+// カラム別フィルタ Popover
+function ColumnFilterPopover({
+  column,
+  colType,
+  label,
+}: {
+  column: TColumn<Row>
+  colType: Column['type']
+  label: string
+}) {
+  const currentFilter = column.getFilterValue()
+  const isActive = currentFilter != null
+
+  if (colType === 'number') {
+    const numFilter = (currentFilter as NumberRangeFilter | undefined) ?? { min: '', max: '' }
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              'flex h-6 w-6 shrink-0 items-center justify-center rounded hover:bg-accent',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              isActive ? 'text-primary' : 'text-muted-foreground/40 hover:text-muted-foreground',
+            )}
+            aria-label={`${label} でフィルタ`}
+          >
+            <Filter className={cn('h-3 w-3', isActive && 'fill-current')} />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-52 p-3" align="start">
+          <p className="mb-2 text-xs font-medium text-foreground">{label} の範囲</p>
+          <div className="flex flex-col gap-2">
+            <Input
+              placeholder="最小値"
+              type="number"
+              value={numFilter.min}
+              onChange={(e) =>
+                column.setFilterValue({ ...numFilter, min: e.target.value })
+              }
+              className="h-8 text-sm"
+            />
+            <Input
+              placeholder="最大値"
+              type="number"
+              value={numFilter.max}
+              onChange={(e) =>
+                column.setFilterValue({ ...numFilter, max: e.target.value })
+              }
+              className="h-8 text-sm"
+            />
+            {isActive && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs text-muted-foreground"
+                onClick={() => column.setFilterValue(undefined)}
+              >
+                クリア
+              </Button>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+    )
+  }
+
+  if (colType === 'boolean') {
+    const boolFilter = (currentFilter as string | undefined) ?? ''
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              'flex h-6 w-6 shrink-0 items-center justify-center rounded hover:bg-accent',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              isActive ? 'text-primary' : 'text-muted-foreground/40 hover:text-muted-foreground',
+            )}
+            aria-label={`${label} でフィルタ`}
+          >
+            <Filter className={cn('h-3 w-3', isActive && 'fill-current')} />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-40 p-3" align="start">
+          <p className="mb-2 text-xs font-medium text-foreground">{label}</p>
+          <Select
+            value={boolFilter}
+            onValueChange={(val) => column.setFilterValue(val || undefined)}
+          >
+            <SelectTrigger className="h-8 text-sm">
+              <SelectValue placeholder="全て" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">全て</SelectItem>
+              <SelectItem value="true">Yes</SelectItem>
+              <SelectItem value="false">No</SelectItem>
+            </SelectContent>
+          </Select>
+        </PopoverContent>
+      </Popover>
+    )
+  }
+
+  // string / date
+  const strFilter = (currentFilter as string | undefined) ?? ''
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            'flex h-6 w-6 shrink-0 items-center justify-center rounded hover:bg-accent',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            isActive ? 'text-primary' : 'text-muted-foreground/40 hover:text-muted-foreground',
+          )}
+          aria-label={`${label} でフィルタ`}
+        >
+          <Filter className={cn('h-3 w-3', isActive && 'fill-current')} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-3" align="start">
+        <p className="mb-2 text-xs font-medium text-foreground">{label} で絞り込み</p>
+        <Input
+          placeholder="含む文字列..."
+          value={strFilter}
+          onChange={(e) => column.setFilterValue(e.target.value || undefined)}
+          className="h-8 text-sm"
+          autoFocus
+        />
+        {isActive && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-2 h-7 w-full text-xs text-muted-foreground"
+            onClick={() => column.setFilterValue(undefined)}
+          >
+            クリア
+          </Button>
+        )}
+      </PopoverContent>
+    </Popover>
+  )
+}
 
 export function DataTable({ columns, rows, fileName, onFilteredRowsChange }: DataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = useState('')
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
 
-  /**
-   * TanStack Table の ColumnDef を Column[] から動的に生成する。
-   * columns が変わるたびに再生成されるため useMemo でメモ化する。
-   */
   const tableColumnDefs = useMemo<ColumnDef<Row>[]>(
     () =>
       columns.map((col) => ({
         accessorKey: col.key,
-        // ソートボタン付きのヘッダー
+        filterFn:
+          col.type === 'number'
+            ? numberRangeFilterFn
+            : col.type === 'boolean'
+              ? booleanFilterFn
+              : 'includesString',
         header: ({ column: tableCol }) => (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="-ml-3 h-8 gap-1 font-medium"
-            onClick={() =>
-              tableCol.toggleSorting(tableCol.getIsSorted() === 'asc')
-            }
-          >
-            {col.label}
-            {tableCol.getIsSorted() === 'asc' ? (
-              <ArrowUp className="h-3 w-3" />
-            ) : tableCol.getIsSorted() === 'desc' ? (
-              <ArrowDown className="h-3 w-3" />
-            ) : (
-              <ArrowUpDown className="h-3 w-3 text-muted-foreground/60" />
-            )}
-          </Button>
+          <div className="flex items-center gap-0.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="-ml-3 h-8 gap-1 font-medium"
+              onClick={() =>
+                tableCol.toggleSorting(tableCol.getIsSorted() === 'asc')
+              }
+            >
+              {col.label}
+              {tableCol.getIsSorted() === 'asc' ? (
+                <ArrowUp className="h-3 w-3" />
+              ) : tableCol.getIsSorted() === 'desc' ? (
+                <ArrowDown className="h-3 w-3" />
+              ) : (
+                <ArrowUpDown className="h-3 w-3 text-muted-foreground/60" />
+              )}
+            </Button>
+            <ColumnFilterPopover
+              column={tableCol}
+              colType={col.type}
+              label={col.label}
+            />
+          </div>
         ),
-        // セルの値をフォーマットして表示
         cell: ({ getValue }) => {
           const value = getValue()
-
-          // null / undefined はダッシュで表示
           if (value === null || value === undefined) {
-            return (
-              <span className="select-none text-muted-foreground/40">—</span>
-            )
+            return <span className="select-none text-muted-foreground/40">—</span>
           }
-
-          // 数値は右揃えで表示
           if (typeof value === 'number') {
             return (
               <span className="block text-right tabular-nums">
@@ -109,26 +301,20 @@ export function DataTable({ columns, rows, fileName, onFilteredRowsChange }: Dat
               </span>
             )
           }
-
-          // boolean は Yes / No で表示
           if (typeof value === 'boolean') {
             return (
               <span
                 className={cn(
                   'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                  value
-                    ? 'bg-green-50 text-green-700'
-                    : 'bg-red-50 text-red-700',
+                  value ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700',
                 )}
               >
                 {value ? 'Yes' : 'No'}
               </span>
             )
           }
-
           return <span>{String(value)}</span>
         },
-        // ソートは文字列・数値どちらにも対応（TanStack が自動判定）
         sortingFn: 'auto',
       })),
     [columns],
@@ -143,9 +329,11 @@ export function DataTable({ columns, rows, fileName, onFilteredRowsChange }: Dat
     state: {
       sorting,
       globalFilter,
+      columnFilters,
     },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
+    onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -163,7 +351,6 @@ export function DataTable({ columns, rows, fileName, onFilteredRowsChange }: Dat
   const totalCount = rows.length
   const currentPage = table.getState().pagination.pageIndex + 1
   const totalPages = table.getPageCount()
-
   const exportRows = sortedRows.map((r) => r.original)
   const baseName = fileName ?? 'export'
 
@@ -208,27 +395,58 @@ export function DataTable({ columns, rows, fileName, onFilteredRowsChange }: Dat
         </DropdownMenu>
       </div>
 
+      {/* アクティブフィルタバッジ */}
+      {columnFilters.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground">フィルター中:</span>
+          {columnFilters.map((filter) => {
+            const col = columns.find((c) => c.key === filter.id)
+            if (!col) return null
+            const text = formatFilterBadge(col.type, col.label, filter.value)
+            if (!text) return null
+            return (
+              <Badge
+                key={filter.id}
+                variant="secondary"
+                className="gap-1.5 pl-2.5 pr-1.5 text-xs"
+              >
+                {text}
+                <button
+                  type="button"
+                  onClick={() => table.getColumn(filter.id)?.setFilterValue(undefined)}
+                  className="rounded-sm hover:text-destructive focus-visible:outline-none"
+                  aria-label={`${col.label} のフィルタを解除`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )
+          })}
+          {columnFilters.length > 1 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => setColumnFilters([])}
+            >
+              すべてクリア
+            </Button>
+          )}
+        </div>
+      )}
+
       {/* テーブル本体 */}
       <div className="overflow-hidden rounded-lg border">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow
-                  key={headerGroup.id}
-                  className="bg-muted/40 hover:bg-muted/40"
-                >
+                <TableRow key={headerGroup.id} className="bg-muted/40 hover:bg-muted/40">
                   {headerGroup.headers.map((header) => (
-                    <TableHead
-                      key={header.id}
-                      className="whitespace-nowrap py-2"
-                    >
+                    <TableHead key={header.id} className="whitespace-nowrap py-2">
                       {header.isPlaceholder
                         ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
+                        : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   ))}
                 </TableRow>
@@ -241,8 +459,8 @@ export function DataTable({ columns, rows, fileName, onFilteredRowsChange }: Dat
                     colSpan={columns.length}
                     className="h-32 text-center text-muted-foreground"
                   >
-                    {globalFilter
-                      ? `"${globalFilter}" に一致するデータがありません`
+                    {globalFilter || columnFilters.length > 0
+                      ? 'フィルタ条件に一致するデータがありません'
                       : 'データがありません'}
                   </TableCell>
                 </TableRow>
@@ -250,14 +468,8 @@ export function DataTable({ columns, rows, fileName, onFilteredRowsChange }: Dat
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id} className="hover:bg-muted/20">
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell
-                        key={cell.id}
-                        className="whitespace-nowrap py-2"
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
+                      <TableCell key={cell.id} className="whitespace-nowrap py-2">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
                   </TableRow>
@@ -270,7 +482,6 @@ export function DataTable({ columns, rows, fileName, onFilteredRowsChange }: Dat
 
       {/* ページネーション */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* 1ページあたりの行数選択 */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>表示件数:</span>
           <Select
@@ -290,7 +501,6 @@ export function DataTable({ columns, rows, fileName, onFilteredRowsChange }: Dat
           </Select>
         </div>
 
-        {/* ページ情報とナビゲーションボタン */}
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">
             {currentPage} / {totalPages} ページ

@@ -14,6 +14,7 @@ import type {
   ChartType,
   ColSpan,
   Aggregation,
+  LineType,
 } from '@/lib/store/dashboard'
 
 export const user = pgTable('user', {
@@ -131,6 +132,9 @@ export const chart = pgTable(
       .$type<Aggregation>()
       .notNull()
       .default('none'),
+    stacked: boolean('stacked'),
+    lineType: text('line_type').$type<LineType>(),
+    showDots: boolean('show_dots'),
     order: integer('order').notNull().default(0),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')

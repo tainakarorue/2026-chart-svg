@@ -38,6 +38,9 @@ export function DatasetRestoreView({ datasetId }: Props) {
           yAxisKeys: c.yAxisKeys,
           colSpan: c.colSpan as ChartConfig['colSpan'],
           aggregation: c.aggregation as ChartConfig['aggregation'],
+          ...(c.stacked   != null && { stacked:  c.stacked }),
+          ...(c.lineType  != null && { lineType: c.lineType  as ChartConfig['lineType'] }),
+          ...(c.showDots  != null && { showDots: c.showDots }),
         }),
       ),
     })
