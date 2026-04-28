@@ -2,10 +2,14 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { FileIcon, Home } from 'lucide-react'
+import { CrownIcon, FileIcon, Home } from 'lucide-react'
 
 import { authClient } from '@/lib/auth-client'
 import { useSafeLogout } from '@/hooks/use-safe-logout'
+import { useCheckout } from '@/hooks/use-checkout'
+import { useTRPC } from '@/trpc/client'
+import { useQuery } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
 
 import {
   Sidebar,
@@ -40,6 +44,16 @@ const userItems = [
 export const MainSidebar = () => {
   const { data: session, isPending: userIsPending } = authClient.useSession()
   const { logout, isLoading: logoutIsLoading } = useSafeLogout()
+  const { redirectToPortal } = useCheckout()
+  const router = useRouter()
+  const trpc = useTRPC()
+  const { data: subscriptionStatus, isPending: subscriptionIsPending } =
+    useQuery(
+      trpc.subscription.getStatus.queryOptions(undefined, {
+        enabled: !!session?.user,
+      }),
+    )
+  const isProActive = subscriptionStatus?.isActive ?? false
 
   return (
     <Sidebar collapsible="icon">
@@ -58,7 +72,7 @@ export const MainSidebar = () => {
                         height={24}
                         style={{ width: '32px', height: '32px' }}
                       />
-                      <span>SVC to Graph</span>
+                      <span>To Grapher</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -103,6 +117,45 @@ export const MainSidebar = () => {
             </SidebarGroupContent>
           </SidebarGroup>
         )}
+
+        {session && !subscriptionIsPending && (
+          <SidebarGroup>
+            <SidebarGroupLabel>プラン</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {isProActive ? (
+                  <>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton className="py-5 pointer-events-none">
+                        <CrownIcon />
+                        <span>プロプラン</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        className="py-5"
+                        onClick={redirectToPortal}
+                      >
+                        <CrownIcon />
+                        <span>サブスクリプション管理</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </>
+                ) : (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="py-5"
+                      onClick={() => router.push('/upgrade')}
+                    >
+                      <CrownIcon />
+                      <span>プロプランにアップグレード</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
@@ -112,6 +165,8 @@ export const MainSidebar = () => {
               isPending={userIsPending}
               onLogout={logout}
               isLoggingOut={logoutIsLoading}
+              isProActive={isProActive}
+              isSubscriptionPending={subscriptionIsPending}
             />
           </SidebarMenuItem>
         </SidebarMenu>

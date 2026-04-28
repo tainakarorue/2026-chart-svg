@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import {
   ChevronsUpDownIcon,
+  CrownIcon,
   LogInIcon,
   LogOutIcon,
   SunIcon,
@@ -10,6 +11,8 @@ import {
 import { useTheme } from 'next-themes'
 
 import { useMounted } from '@/hooks/use-mounted'
+import { useCheckout } from '@/hooks/use-checkout'
+import { useRouter } from 'next/navigation'
 
 import {
   UserAvatar,
@@ -38,6 +41,8 @@ interface Props {
   isPending: boolean
   onLogout: () => void
   isLoggingOut: boolean
+  isProActive: boolean
+  isSubscriptionPending: boolean
 }
 
 export const MainUserMenu = ({
@@ -45,7 +50,11 @@ export const MainUserMenu = ({
   isPending,
   onLogout,
   isLoggingOut,
+  isProActive,
+  isSubscriptionPending,
 }: Props) => {
+  const { redirectToPortal } = useCheckout()
+  const router = useRouter()
   const { setTheme } = useTheme()
   const mounted = useMounted()
 
@@ -80,6 +89,20 @@ export const MainUserMenu = ({
         <div className="px-2 py-1.5">
           <UserAvatar name={user.name} email={user.email} image={user.image} />
         </div>
+        <DropdownMenuSeparator />
+        {!isSubscriptionPending && (
+          isProActive ? (
+            <DropdownMenuItem onClick={redirectToPortal}>
+              <CrownIcon />
+              <span>サブスクリプション管理</span>
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem onClick={() => router.push('/upgrade')}>
+              <CrownIcon />
+              <span>プロプランにアップグレード</span>
+            </DropdownMenuItem>
+          )
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onLogout} disabled={isLoggingOut}>
           <LogOutIcon />

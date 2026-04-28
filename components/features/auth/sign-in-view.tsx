@@ -1,12 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm, Controller } from 'react-hook-form'
 import { OctagonAlertIcon } from 'lucide-react'
 import { toast } from 'sonner'
+import { FcGoogle } from 'react-icons/fc'
 
 import { authClient } from '@/lib/auth-client'
 
@@ -19,7 +21,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertTitle } from '@/components/ui/alert'
-import Link from 'next/link'
 
 const formSchema = z.object({
   email: z.string().email('有効なメールアドレスを入力してください'),
@@ -56,6 +57,22 @@ export const SignInView = () => {
         onError: ({ error }) => {
           toast.error(error.message)
           setError(error.message)
+        },
+      },
+    )
+  }
+
+  const signInGoogle = async () => {
+    await authClient.signIn.social(
+      {
+        provider: 'google',
+      },
+      {
+        onSuccess: () => {
+          router.push('/')
+        },
+        onError: () => {
+          toast.error('Something went wrong')
         },
       },
     )
@@ -123,6 +140,16 @@ export const SignInView = () => {
 
         <Button type="submit" className="w-full" disabled={isSubmitting}>
           {isSubmitting ? 'サインイン中...' : 'サインイン'}
+        </Button>
+        <Button
+          onClick={signInGoogle}
+          variant="outline"
+          className="w-full"
+          type="button"
+          disabled={isSubmitting}
+        >
+          <FcGoogle className="size-5 mr-2" />
+          Continue with Google
         </Button>
         <p className="text-sm text-muted-foreground text-center">
           アカウントをお持ちでない方は

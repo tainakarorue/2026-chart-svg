@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
+import { FcGoogle } from 'react-icons/fc'
 import { useRouter } from 'next/navigation'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -19,7 +21,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertTitle } from '@/components/ui/alert'
-import Link from 'next/link'
 
 const formSchema = z
   .object({
@@ -66,6 +67,22 @@ export const SignUpView = () => {
         onError: ({ error }) => {
           toast.error(error.message)
           setError(error.message)
+        },
+      },
+    )
+  }
+
+  const signInGoogle = async () => {
+    await authClient.signIn.social(
+      {
+        provider: 'google',
+      },
+      {
+        onSuccess: () => {
+          router.push('/')
+        },
+        onError: () => {
+          toast.error('Something went wrong')
         },
       },
     )
@@ -172,6 +189,17 @@ export const SignUpView = () => {
         )}
         <Button type="submit" className="w-full" disabled={isSubmitting}>
           {isSubmitting ? '作成中...' : 'アカウントを作成'}
+        </Button>
+
+        <Button
+          onClick={signInGoogle}
+          variant="outline"
+          className="w-full"
+          type="button"
+          disabled={isSubmitting}
+        >
+          <FcGoogle className="size-5 mr-2" />
+          Continue with Google
         </Button>
 
         <p className="text-sm text-muted-foreground text-center">
