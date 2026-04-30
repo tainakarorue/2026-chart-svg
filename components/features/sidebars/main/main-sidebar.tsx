@@ -2,14 +2,15 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { CrownIcon, FileIcon, Home } from 'lucide-react'
+import { BadgeCheck, CrownIcon, FileIcon, Home, Shield } from 'lucide-react'
+import { useEffect } from 'react'
 
 import { authClient } from '@/lib/auth-client'
 import { useSafeLogout } from '@/hooks/use-safe-logout'
 import { useCheckout } from '@/hooks/use-checkout'
 import { useTRPC } from '@/trpc/client'
 import { useQuery } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 
 import {
   Sidebar,
@@ -21,6 +22,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from '@/components/ui/sidebar'
 
 import { MainUserMenu } from './main-user-menu'
@@ -46,6 +48,12 @@ export const MainSidebar = () => {
   const { logout, isLoading: logoutIsLoading } = useSafeLogout()
   const { redirectToPortal } = useCheckout()
   const router = useRouter()
+  const pathname = usePathname()
+  const { setOpenMobile } = useSidebar()
+
+  useEffect(() => {
+    setOpenMobile(false)
+  }, [pathname, setOpenMobile])
   const trpc = useTRPC()
   const { data: subscriptionStatus, isPending: subscriptionIsPending } =
     useQuery(
@@ -126,8 +134,8 @@ export const MainSidebar = () => {
                 {isProActive ? (
                   <>
                     <SidebarMenuItem>
-                      <SidebarMenuButton className="py-5 pointer-events-none">
-                        <CrownIcon />
+                      <SidebarMenuButton className="py-5 pointer-events-none bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">
+                        <BadgeCheck />
                         <span>プロプラン</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -142,15 +150,23 @@ export const MainSidebar = () => {
                     </SidebarMenuItem>
                   </>
                 ) : (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      className="py-5"
-                      onClick={() => router.push('/upgrade')}
-                    >
-                      <CrownIcon />
-                      <span>プロプランにアップグレード</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  <>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton className="py-5 pointer-events-none bg-slate-100 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400">
+                        <Shield />
+                        <span>フリープラン</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        className="py-5"
+                        onClick={() => router.push('/upgrade')}
+                      >
+                        <CrownIcon />
+                        <span>プロプランにアップグレード</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </>
                 )}
               </SidebarMenu>
             </SidebarGroupContent>
