@@ -1,5 +1,5 @@
-import { ChartUploadView } from '@/components/features/charts/views/chart-upload-view'
+import { HomeView } from '@/components/features/home/home-view'
 
 export default function Home() {
-  return <ChartUploadView />
+  return <HomeView />
 }

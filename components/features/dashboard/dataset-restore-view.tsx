@@ -19,6 +19,13 @@ export function DatasetRestoreView({ datasetId }: Props) {
 
   const storeDatasetId = useDashboardStore((s) => s.datasetId)
   const restoreFromDataset = useDashboardStore((s) => s.restoreFromDataset)
+  const resetFile = useDashboardStore((s) => s.resetFile)
+
+  useEffect(() => {
+    return () => {
+      resetFile()
+    }
+  }, [resetFile])
 
   useEffect(() => {
     if (storeDatasetId === datasetId) return
